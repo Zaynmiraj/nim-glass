@@ -1,0 +1,22 @@
+# nim-glass
+
+node_modules/
+lib/
+*.log
+.DS_Store
+*.tgz
+
+# iOS
+ios/Pods/
+ios/*.xcworkspace
+ios/build/
+
+# Android
+android/build/
+android/.gradle/
+android/local.properties
+
+# Example
+example/node_modules/
+example/ios/Pods/
+example/android/build/

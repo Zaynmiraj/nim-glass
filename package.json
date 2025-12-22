@@ -1,0 +1,57 @@
+{
+  "name": "nim-glass",
+  "version": "1.0.0",
+  "description": "React Native glass/blur effects and inset shadows that actually work on Android and iOS",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "nim-glass": "./cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nimhq/nim-glass.git"
+  },
+  "keywords": [
+    "react-native",
+    "blur",
+    "glass",
+    "glassmorphism",
+    "inset-shadow",
+    "android",
+    "ios",
+    "ui"
+  ],
+  "author": {
+    "name": "ZaYn Miraj",
+    "email": "zayn.miraj@gmail.com",
+    "url": "https://www.zaynmiraj.com"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-native": ">=0.64.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "react": "^18.2.0",
+    "react-native": "^0.72.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.0.0"
+  },
+  "files": [
+    "lib/",
+    "cli/",
+    "android/",
+    "ios/",
+    "src/",
+    "nim-glass.podspec",
+    "README.md"
+  ]
+}
