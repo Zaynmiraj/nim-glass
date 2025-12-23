@@ -27,14 +27,15 @@ public class BlurHelper {
     /**
      * Apply blur to a bitmap using the best available method
      * 
-     * Supports blur radius 1-100:
-     * - For radius <= 25: Single pass blur
-     * - For radius > 25: Multi-pass blur for stronger effect
+     * Supports blur radius 1-100 with DEEP blur effect:
+     * - Uses aggressive downsampling for intense blur
+     * - Multiple passes with maximum radius for strong effect
+     * - Higher values (80-100) produce very deep blur
      * 
      * @param context RenderScript context (can be null for fallback)
      * @param bitmap Source bitmap to blur
      * @param blurRadius Blur radius (1-100)
-     * @param downsampleFactor Scale down factor for performance (1-8)
+     * @param downsampleFactor Base scale down factor (1-8), will be increased for stronger blur
      * @return Blurred bitmap
      */
     public static Bitmap blur(
@@ -45,26 +46,49 @@ public class BlurHelper {
     ) {
         // Clamp input values
         blurRadius = Math.max(1f, Math.min(100f, blurRadius));
-        downsampleFactor = Math.max(1, Math.min(8, downsampleFactor));
+        downsampleFactor = Math.max(1, Math.min(16, downsampleFactor));
         
-        // For higher blur, increase downsample for better effect
-        if (blurRadius > 50 && downsampleFactor < 4) {
-            downsampleFactor = Math.min(8, downsampleFactor + 2);
+        // AGGRESSIVE downsampling for deeper blur
+        // Higher blur = more downsampling = stronger effect
+        int effectiveDownsample = downsampleFactor;
+        if (blurRadius > 30) {
+            effectiveDownsample = Math.max(effectiveDownsample, 4);
+        }
+        if (blurRadius > 50) {
+            effectiveDownsample = Math.max(effectiveDownsample, 6);
+        }
+        if (blurRadius > 70) {
+            effectiveDownsample = Math.max(effectiveDownsample, 8);
         }
         
-        // Scale down for performance
-        int width = Math.max(1, bitmap.getWidth() / downsampleFactor);
-        int height = Math.max(1, bitmap.getHeight() / downsampleFactor);
+        // Scale down for performance and blur intensity
+        int width = Math.max(1, bitmap.getWidth() / effectiveDownsample);
+        int height = Math.max(1, bitmap.getHeight() / effectiveDownsample);
         
         Bitmap inputBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
         Bitmap outputBitmap = inputBitmap;
         
-        // Calculate number of blur passes needed
-        // For blur > 25, we do multiple passes
-        int passes = (int) Math.ceil(blurRadius / MAX_BLUR_RADIUS);
-        float radiusPerPass = Math.min(MAX_BLUR_RADIUS, blurRadius / passes);
+        // Calculate number of blur passes - MORE passes for deeper blur
+        // Each pass adds blur, so 4+ passes = very deep blur
+        int passes;
+        float radiusPerPass;
         
-        // Apply blur in multiple passes for stronger effect
+        if (blurRadius <= 25) {
+            passes = 1;
+            radiusPerPass = blurRadius;
+        } else if (blurRadius <= 50) {
+            passes = 3;
+            radiusPerPass = MAX_BLUR_RADIUS;
+        } else if (blurRadius <= 75) {
+            passes = 5;
+            radiusPerPass = MAX_BLUR_RADIUS;
+        } else {
+            // Ultra deep blur: 6+ passes with max radius
+            passes = 6;
+            radiusPerPass = MAX_BLUR_RADIUS;
+        }
+        
+        // Apply blur in multiple passes for DEEP blur effect
         for (int i = 0; i < passes; i++) {
             if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 try {
@@ -77,8 +101,8 @@ public class BlurHelper {
             }
         }
         
-        // Scale back up (the upscaling also adds to blur effect)
-        if (downsampleFactor > 1) {
+        // Scale back up - this ALSO adds blur effect due to interpolation
+        if (effectiveDownsample > 1) {
             outputBitmap = Bitmap.createScaledBitmap(
                     outputBitmap, 
                     bitmap.getWidth(), 
