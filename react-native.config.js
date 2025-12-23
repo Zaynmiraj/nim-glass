@@ -1,17 +1,14 @@
 module.exports = {
-  project: {},
-  commands: [],
-  dependencies: {
-    'nim-glass': {
-      root: '.',
-      platforms: {
-        ios: {
-          sourceDir: './ios'
-        },
-        android: {
-          sourceDir: './android'
-        }
-      }
-    }
-  }
+  dependency: {
+    platforms: {
+      ios: {
+        podspecPath: './nim-glass.podspec',
+      },
+      android: {
+        sourceDir: './android',
+        packageImportPath: 'import com.nimglass.NimGlassPackage;',
+        packageInstance: 'new NimGlassPackage()',
+      },
+    },
+  },
 };
