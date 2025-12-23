@@ -16,9 +16,20 @@ const NATIVE_COMPONENT_NAME = 'NimGlassBlurView';
 const isNativeBlurAvailable = 
   UIManager.getViewManagerConfig?.(NATIVE_COMPONENT_NAME) != null;
 
+// Native blur view props
+interface NativeBlurViewProps extends ViewProps {
+  blurRadius: number;
+  tintColor: string;
+  tintOpacity: number;
+  cornerRadius: number;
+  downsampleFactor: number;
+  showInsetShadow: boolean;
+  insetShadowBlur: number;
+}
+
 // Native blur view component
 const NativeBlurView = isNativeBlurAvailable
-  ? requireNativeComponent<ViewProps & { blurRadius: number; tintColor: string }>(NATIVE_COMPONENT_NAME)
+  ? requireNativeComponent<NativeBlurViewProps>(NATIVE_COMPONENT_NAME)
   : null;
 
 /**
@@ -67,7 +78,7 @@ const getTintColor = (tint: string, customColor?: string): string => {
  * GlassView - A customizable blur/glass effect component
  * 
  * Works on both iOS and Android with native blur implementations.
- * Falls back to a semi-transparent overlay on unsupported devices.
+ * On Android, captures background content and applies real Gaussian blur.
  * 
  * @example
  * ```tsx
@@ -75,17 +86,31 @@ const getTintColor = (tint: string, customColor?: string): string => {
  *   <Text>Content on glass</Text>
  * </GlassView>
  * ```
+ * 
+ * @example
+ * ```tsx
+ * <GlassView 
+ *   blurIntensity={50}
+ *   tint="dark"
+ *   downsampleFactor={2}
+ *   showInsetShadow={true}
+ * >
+ *   <Text>High quality blur with inset shadow</Text>
+ * </GlassView>
+ * ```
  */
 export const GlassView: React.FC<GlassViewProps> = ({
   blurIntensity = 'medium',
   tint = 'light',
   tintColor,
-  tintOpacity = 0.1,
+  tintOpacity = 0.15,
   borderRadius = 16,
   borderWidth = 1,
   borderColor = 'rgba(255, 255, 255, 0.2)',
   gradientBorder = false,
-  gradientBorderColors,
+  downsampleFactor = 4,
+  showInsetShadow = false,
+  insetShadowBlur = 12,
   style,
   children,
 }) => {
@@ -112,16 +137,11 @@ export const GlassView: React.FC<GlassViewProps> = ({
           style={StyleSheet.absoluteFill}
           blurRadius={blurRadius}
           tintColor={resolvedTintColor}
-        />
-        {/* Tint overlay */}
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: resolvedTintColor,
-              opacity: tintOpacity,
-            },
-          ]}
+          tintOpacity={tintOpacity}
+          cornerRadius={borderRadius}
+          downsampleFactor={downsampleFactor}
+          showInsetShadow={showInsetShadow}
+          insetShadowBlur={insetShadowBlur}
         />
         {/* Content */}
         <View style={styles.content}>{children}</View>
@@ -141,7 +161,7 @@ export const GlassView: React.FC<GlassViewProps> = ({
     );
   }
 
-  // Fallback: CSS-based blur simulation
+  // Fallback: Semi-transparent overlay simulation
   return (
     <View style={containerStyle}>
       {/* Background blur simulation */}
@@ -165,6 +185,13 @@ export const GlassView: React.FC<GlassViewProps> = ({
           },
         ]}
       />
+      {/* Inset shadow simulation */}
+      {showInsetShadow && (
+        <>
+          <View style={[styles.insetTop, { height: insetShadowBlur }]} />
+          <View style={[styles.insetLeft, { width: insetShadowBlur }]} />
+        </>
+      )}
       {/* Content */}
       <View style={styles.content}>{children}</View>
       {/* Border highlight */}
@@ -197,6 +224,20 @@ const styles = StyleSheet.create({
   borderHighlight: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 2,
+  },
+  insetTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  insetLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
 });
 

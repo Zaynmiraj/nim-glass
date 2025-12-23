@@ -68,6 +68,25 @@ export interface GlassViewProps {
   gradientBorderColors?: string[];
 
   /**
+   * Downsample factor for blur performance (Android)
+   * Higher value = faster but lower quality blur
+   * @default 4
+   */
+  downsampleFactor?: number;
+
+  /**
+   * Show built-in inset shadow on the glass view
+   * @default false
+   */
+  showInsetShadow?: boolean;
+
+  /**
+   * Inset shadow blur radius (when showInsetShadow=true)
+   * @default 12
+   */
+  insetShadowBlur?: number;
+
+  /**
    * Container style
    */
   style?: ViewStyle;
