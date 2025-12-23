@@ -27,9 +27,13 @@ public class BlurHelper {
     /**
      * Apply blur to a bitmap using the best available method
      * 
+     * Supports blur radius 1-100:
+     * - For radius <= 25: Single pass blur
+     * - For radius > 25: Multi-pass blur for stronger effect
+     * 
      * @param context RenderScript context (can be null for fallback)
      * @param bitmap Source bitmap to blur
-     * @param blurRadius Blur radius (1-100, will be scaled)
+     * @param blurRadius Blur radius (1-100)
      * @param downsampleFactor Scale down factor for performance (1-8)
      * @return Blurred bitmap
      */
@@ -39,39 +43,47 @@ public class BlurHelper {
             float blurRadius,
             int downsampleFactor
     ) {
-        // Clamp downsample factor
+        // Clamp input values
+        blurRadius = Math.max(1f, Math.min(100f, blurRadius));
         downsampleFactor = Math.max(1, Math.min(8, downsampleFactor));
+        
+        // For higher blur, increase downsample for better effect
+        if (blurRadius > 50 && downsampleFactor < 4) {
+            downsampleFactor = Math.min(8, downsampleFactor + 2);
+        }
         
         // Scale down for performance
         int width = Math.max(1, bitmap.getWidth() / downsampleFactor);
         int height = Math.max(1, bitmap.getHeight() / downsampleFactor);
         
         Bitmap inputBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
-        Bitmap outputBitmap = Bitmap.createBitmap(inputBitmap);
+        Bitmap outputBitmap = inputBitmap;
         
-        // Scale blur radius for downsampled image
-        float scaledRadius = Math.max(1f, Math.min(MAX_BLUR_RADIUS, blurRadius / downsampleFactor));
+        // Calculate number of blur passes needed
+        // For blur > 25, we do multiple passes
+        int passes = (int) Math.ceil(blurRadius / MAX_BLUR_RADIUS);
+        float radiusPerPass = Math.min(MAX_BLUR_RADIUS, blurRadius / passes);
         
-        // Use RenderScript if available
-        if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            try {
-                outputBitmap = renderScriptBlur(context, inputBitmap, scaledRadius);
-            } catch (Exception e) {
-                // Fallback to stack blur
-                outputBitmap = stackBlur(inputBitmap, (int) scaledRadius);
+        // Apply blur in multiple passes for stronger effect
+        for (int i = 0; i < passes; i++) {
+            if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                try {
+                    outputBitmap = renderScriptBlur(context, outputBitmap, radiusPerPass);
+                } catch (Exception e) {
+                    outputBitmap = stackBlur(outputBitmap, (int) radiusPerPass);
+                }
+            } else {
+                outputBitmap = stackBlur(outputBitmap, (int) radiusPerPass);
             }
-        } else {
-            // Fallback to stack blur
-            outputBitmap = stackBlur(inputBitmap, (int) scaledRadius);
         }
         
-        // Scale back up
+        // Scale back up (the upscaling also adds to blur effect)
         if (downsampleFactor > 1) {
             outputBitmap = Bitmap.createScaledBitmap(
                     outputBitmap, 
                     bitmap.getWidth(), 
                     bitmap.getHeight(), 
-                    true
+                    true  // Bilinear filtering adds smoothness
             );
         }
         
